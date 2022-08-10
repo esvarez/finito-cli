@@ -13,13 +13,20 @@ const (
 	_nameSpreadsheet = "finito_test"
 )
 
-func initCmd(ctx context.Context, s sheetUseCase) *cobra.Command {
+func initCmd(ctx context.Context, cfg *config.Configuration, s sheetUseCase) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Initialize the project",
 		Long:  `Initialize the project`,
 		Run: func(cmd *cobra.Command, args []string) {
-
+			if !isLoggedIn {
+				log.Println("You must login first")
+				return
+			}
+			if cfg.SheetID != nil {
+				log.Println("Sheet already initialized")
+				return
+			}
 			log.Println("Initializing the project")
 
 			log.Println("Creating the spreadsheet")

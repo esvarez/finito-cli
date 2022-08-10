@@ -11,6 +11,9 @@ type SheetUseCase struct {
 }
 
 func NewSheet(repo sheetRepo) *SheetUseCase {
+	if repo == nil {
+		return nil
+	}
 	return &SheetUseCase{
 		repo: repo,
 	}

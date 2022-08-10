@@ -17,7 +17,7 @@ type Configuration struct {
 }
 
 type App struct {
-	SheetID *string `json:"sheet_id"`
+	SheetID *string `yaml:"sheet_id"`
 }
 
 func LoadConfiguration() (*Configuration, error) {
@@ -47,4 +47,12 @@ func SaveConfiguration(cfg *Configuration) error {
 	}
 
 	return nil
+}
+func init() {
+	file := viper.New()
+	file.SetConfigFile(configFile)
+	file.AddConfigPath(finitoDir)
+	file.SetConfigType("yaml")
+	file.Set("app.sheet_id", "")
+	file.SafeWriteConfig()
 }

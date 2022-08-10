@@ -11,6 +11,9 @@ type SheetRepo struct {
 }
 
 func NewSheetRepo(srv *sheets.Service) *SheetRepo {
+	if srv == nil {
+		return nil
+	}
 	return &SheetRepo{
 		srv: srv,
 	}
