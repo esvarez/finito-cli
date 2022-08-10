@@ -17,22 +17,29 @@ import (
 
 var (
 	home, _   = os.UserHomeDir()
-	tokenFile = home + "/.finito/token.json"
+	finitoDir = home + "/.finito/"
+	tokenFile = finitoDir + "token.json"
 )
 
 func GetService() *sheets.Service {
 	ctx := context.Background()
+
+	tok, err := tokenFromFile(tokenFile)
+	if err != nil {
+		return nil
+	}
 
 	b, err := json.Marshal(getCredentials())
 	if err != nil {
 		log.Fatalf("Unable to read client secret file: %v", err)
 	}
 
-	config, err := google.ConfigFromJSON(b, sheets.SpreadsheetsReadonlyScope)
+	config, err := google.ConfigFromJSON(b, sheets.SpreadsheetsScope)
 	if err != nil {
 		log.Fatalf("Unable to parse client secret file to config: %v", err)
 	}
-	client := getClient(config)
+
+	client := config.Client(context.Background(), tok)
 
 	srv, err := sheets.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
@@ -41,13 +48,14 @@ func GetService() *sheets.Service {
 	return srv
 }
 
-func Login() {
+func Login() *sheets.Service {
+	ctx := context.Background()
 	b, err := json.Marshal(getCredentials())
 	if err != nil {
 		log.Fatalf("Unable to read client secret file: %v", err)
 	}
 
-	config, err := google.ConfigFromJSON(b, sheets.SpreadsheetsReadonlyScope)
+	config, err := google.ConfigFromJSON(b, sheets.SpreadsheetsScope)
 	if err != nil {
 		log.Fatalf("Unable to parse client secret file to config: %v", err)
 	}
@@ -56,6 +64,13 @@ func Login() {
 	saveToken(tokenFile, tok)
 
 	log.Printf("logged successfully")
+	client := config.Client(context.Background(), tok)
+
+	srv, err := sheets.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		log.Fatalf("Unable to retrieve Sheets client: %v", err)
+	}
+	return srv
 }
 
 // Retrieve a token, saves the token, then returns the generated client.
@@ -110,10 +125,8 @@ func saveToken(path string, token *oauth2.Token) {
 }
 
 func init() {
-
-	folder := home + "/.finito"
-	if _, err := os.Stat(folder); errors.Is(err, os.ErrNotExist) {
-		err = os.Mkdir(folder, os.ModePerm)
+	if _, err := os.Stat(finitoDir); errors.Is(err, os.ErrNotExist) {
+		err = os.Mkdir(finitoDir, os.ModePerm)
 		if err != nil {
 			log.Printf("error creating folder %v", err)
 		}
