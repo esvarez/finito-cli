@@ -15,7 +15,10 @@ import (
 	"google.golang.org/api/sheets/v4"
 )
 
-const tokenFile = "~/.finito/token.json"
+var (
+	home, _   = os.UserHomeDir()
+	tokenFile = home + "/.finito/token.json"
+)
 
 func GetService() *sheets.Service {
 	ctx := context.Background()
@@ -97,14 +100,6 @@ func tokenFromFile(file string) (*oauth2.Token, error) {
 
 // Saves a token to a file path.
 func saveToken(path string, token *oauth2.Token) {
-	folder := "~/.finito"
-	if _, err := os.Stat(folder); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(folder, os.ModePerm)
-		if err != nil {
-			log.Println(err)
-		}
-	}
-
 	fmt.Printf("Saving credential file to: %s\n", path)
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
@@ -112,4 +107,15 @@ func saveToken(path string, token *oauth2.Token) {
 	}
 	defer f.Close()
 	json.NewEncoder(f).Encode(token)
+}
+
+func init() {
+
+	folder := home + "/.finito"
+	if _, err := os.Stat(folder); errors.Is(err, os.ErrNotExist) {
+		err = os.Mkdir(folder, os.ModePerm)
+		if err != nil {
+			log.Printf("error creating folder %v", err)
+		}
+	}
 }

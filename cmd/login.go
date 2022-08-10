@@ -1,13 +1,10 @@
 package cmd
 
 import (
-	"errors"
-	"fmt"
-	"log"
-	"os"
+	"github.com/esvarez/finito/pkg/google"
 	"path/filepath"
 	"runtime"
-	
+
 	"github.com/spf13/cobra"
 )
 
@@ -23,15 +20,7 @@ func loginCmd() *cobra.Command {
 		Short: "Login to the server",
 		Long:  "Login to the server",
 		Run: func(cmd *cobra.Command, args []string) {
-			//google.Login()
-			fmt.Println(basepath)
-			folder := "~/.finito/"
-			if _, err := os.Stat(folder); errors.Is(err, os.ErrNotExist) {
-				err = os.Mkdir(folder, os.ModePerm)
-				if err != nil {
-					log.Printf("error creating folder %v", err)
-				}
-			}
+			google.Login()
 		},
 	}
 
