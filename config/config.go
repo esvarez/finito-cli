@@ -17,7 +17,7 @@ type Configuration struct {
 }
 
 type App struct {
-	SheetID *string `yaml:"sheet_id"`
+	SheetID *string `mapstructure:"sheet_id" yaml:"sheet_id"`
 }
 
 func LoadConfiguration() (*Configuration, error) {

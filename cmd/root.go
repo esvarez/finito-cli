@@ -40,8 +40,12 @@ func Execute() {
 
 	sheet := usecase.NewSheet(sheetRepo)
 
+	addCMD := newAddCmd(&cfg.App, sheet)
+
 	rootCmd.AddCommand(loginCmd())
+
 	rootCmd.AddCommand(initCmd(ctx, cfg, sheet))
+	rootCmd.AddCommand(addCMD.add(ctx))
 
 	err = rootCmd.Execute()
 	if err != nil {
