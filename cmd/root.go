@@ -44,6 +44,7 @@ func Execute() {
 	initCMD := newInitCmd(cfg, sheet)
 
 	rootCmd.AddCommand(loginCmd())
+	rootCmd.AddCommand(configCmd(cfg))
 
 	rootCmd.AddCommand(initCMD.command(ctx))
 	rootCmd.AddCommand(addCMD.command(ctx))

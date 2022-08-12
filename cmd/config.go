@@ -1,40 +1,27 @@
-/*
-Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
-*/
 package cmd
 
 import (
-	"fmt"
+	"github.com/esvarez/finito/config"
 
 	"github.com/spf13/cobra"
 )
 
-// configCmd represents the config command
-var configCmd = &cobra.Command{
-	Use:   "config",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+var (
+	spreadSheetID string
+)
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("config called")
-	},
-}
+func configCmd(cfg *config.Configuration) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "config",
+		Short: "Configure the project",
+		Long:  "Configure the project",
+		Run: func(cmd *cobra.Command, args []string) {
+			cfg.SheetID = &spreadSheetID
+			config.SaveConfiguration(cfg)
+		},
+	}
 
-func init() {
-	//rootCmd.AddCommand(configCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// configCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// configCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	cmd.Flags().StringVarP(&spreadSheetID, "sheet-id", "", "i", "The id of the spreadsheet")
+	cmd.MarkFlagRequired("sheet-id")
+	return cmd
 }

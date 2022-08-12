@@ -68,6 +68,9 @@ func (a addCmd) addExpense(ctx context.Context) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&amount, "amount", "a", "", "Amount of the expense")
+	cmd.Flags().StringVarP(&date, "date", "d", "", "Date of the expense")
+	cmd.Flags().StringVarP(&description, "description", "e", "", "Description of the expense")
+	cmd.Flags().StringVarP(&category, "category", "c", "", "Category of the expense")
 	cmd.MarkFlagRequired("amount")
 	return cmd
 }
@@ -93,6 +96,10 @@ func (a addCmd) addIncome(ctx context.Context) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&amount, "amount", "a", "", "Amount of the expense")
+	cmd.Flags().StringVarP(&date, "date", "d", "", "Date of the expense")
+	cmd.Flags().StringVarP(&description, "description", "e", "", "Description of the expense")
+	cmd.Flags().StringVarP(&category, "category", "c", "", "Category of the expense")
+
 	cmd.MarkFlagRequired("amount")
 	return cmd
 }
