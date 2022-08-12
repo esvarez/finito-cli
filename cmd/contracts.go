@@ -1,9 +1,12 @@
 package cmd
 
-import "context"
+import (
+	"context"
+	"github.com/esvarez/finito/internal/entity"
+)
 
 type sheetUseCase interface {
-	Create(ctx context.Context, name string) (string, error)
-	AddExpense(ctx context.Context, sheetID string, expense string) error
-	AddIncome(ctx context.Context, sheetID string, expense string) error
+	CreateFinito(ctx context.Context, name string) (string, error)
+	AddExpense(ctx context.Context, sheetID string, transaction *entity.Transaction) error
+	AddIncome(ctx context.Context, sheetID string, transaction *entity.Transaction) error
 }

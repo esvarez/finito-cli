@@ -2,8 +2,13 @@ package repo
 
 import (
 	"context"
-
+	"github.com/esvarez/finito/internal/entity"
 	"google.golang.org/api/sheets/v4"
+)
+
+const (
+	_overwrite   = "OVERWRITE"
+	_userEntered = "USER_ENTERED"
 )
 
 type SheetRepo struct {
@@ -16,10 +21,15 @@ func NewSheetRepo(srv *sheets.Service) *SheetRepo {
 	}
 }
 
-func (r *SheetRepo) Create(ctx context.Context, name string) (string, error) {
+func (r *SheetRepo) Create(ctx context.Context, nameSpreadSheet, mainSheet string) (string, error) {
 	sheet := &sheets.Spreadsheet{
 		Properties: &sheets.SpreadsheetProperties{
-			Title: name,
+			Title: nameSpreadSheet,
+		},
+		Sheets: []*sheets.Sheet{
+			{
+				Properties: &sheets.SheetProperties{Title: mainSheet},
+			},
 		},
 	}
 	resp, err := r.srv.Spreadsheets.Create(sheet).Context(ctx).Do()
@@ -29,29 +39,37 @@ func (r *SheetRepo) Create(ctx context.Context, name string) (string, error) {
 	return resp.SpreadsheetId, nil
 }
 
-func (r *SheetRepo) AddExpense(ctx context.Context, sheetID string, expense string) error {
-	field := "C3"
-	return r.appendTransaction(ctx, sheetID, field, expense)
-}
-
-func (r *SheetRepo) AddIncome(ctx context.Context, sheetID string, expense string) error {
-	field := "H3"
-	return r.appendTransaction(ctx, sheetID, field, expense)
-}
-
-func (r *SheetRepo) appendTransaction(ctx context.Context, sheetID, column, expense string) error {
+func (r *SheetRepo) AddRow(ctx context.Context, sheetID, column string, row *entity.Transaction) error {
 	req := &sheets.ValueRange{
+		Range: column,
 		Values: [][]interface{}{
-			{expense},
+			{row.Date, row.Amount, row.Description, row.Category},
 		},
 	}
-
-	valueImputOption := "USER_ENTERED"
 	_, err := r.srv.Spreadsheets.Values.
 		Append(sheetID, column, req).
-		ValueInputOption(valueImputOption).
+		ValueInputOption(_userEntered).
+		InsertDataOption(_overwrite).
 		Context(ctx).Do()
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
+func (r *SheetRepo) AddSheet(ctx context.Context, sheetID, name string) error {
+	requests := &sheets.BatchUpdateSpreadsheetRequest{
+		Requests: []*sheets.Request{
+			{
+				AddSheet: &sheets.AddSheetRequest{
+					Properties: &sheets.SheetProperties{
+						Title: name,
+					},
+				},
+			},
+		},
+	}
+	_, err := r.srv.Spreadsheets.BatchUpdate(sheetID, requests).Context(ctx).Do()
 	if err != nil {
 		return err
 	}

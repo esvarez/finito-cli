@@ -48,11 +48,12 @@ func SaveConfiguration(cfg *Configuration) error {
 
 	return nil
 }
+
 func init() {
 	file := viper.New()
 	file.SetConfigFile(configFile)
 	file.AddConfigPath(finitoDir)
 	file.SetConfigType("yaml")
-	file.Set("app.sheet_id", "")
+	file.Set("app.sheet_id", nil)
 	file.SafeWriteConfig()
 }

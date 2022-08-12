@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/esvarez/finito/internal/entity"
 	"log"
 
 	"github.com/esvarez/finito/config"
@@ -11,7 +12,10 @@ import (
 )
 
 var (
-	amount string
+	amount      string
+	date        string
+	description string
+	category    string
 )
 
 type addCmd struct {
@@ -26,7 +30,7 @@ func newAddCmd(cfg *config.App, sheet sheetUseCase) *addCmd {
 	}
 }
 
-func (a addCmd) add(ctx context.Context) *cobra.Command {
+func (a addCmd) command(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add",
 		Short: "Add a new transaction",
@@ -48,7 +52,13 @@ func (a addCmd) addExpense(ctx context.Context) *cobra.Command {
 		Short: "Add a new expense",
 		Long:  `Add a new expense`,
 		Run: func(cmd *cobra.Command, args []string) {
-			err := a.sheet.AddExpense(ctx, *a.cfg.SheetID, amount)
+			transaction := &entity.Transaction{
+				Amount:      amount,
+				Date:        date,
+				Description: description,
+				Category:    category,
+			}
+			err := a.sheet.AddExpense(ctx, *a.cfg.SheetID, transaction)
 			if err != nil {
 				log.Printf("Error adding expense: %v", err)
 				return
@@ -68,7 +78,13 @@ func (a addCmd) addIncome(ctx context.Context) *cobra.Command {
 		Short: "Add a new income",
 		Long:  `Add a new income`,
 		Run: func(cmd *cobra.Command, args []string) {
-			err := a.sheet.AddIncome(ctx, *a.cfg.SheetID, amount)
+			transaction := &entity.Transaction{
+				Amount:      amount,
+				Date:        date,
+				Description: description,
+				Category:    category,
+			}
+			err := a.sheet.AddIncome(ctx, *a.cfg.SheetID, transaction)
 			if err != nil {
 				log.Printf("Error adding income: %v", err)
 				return

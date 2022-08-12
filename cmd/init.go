@@ -25,7 +25,7 @@ func newInitCmd(cfg *config.Configuration, sheet sheetUseCase) *initCmd {
 	}
 }
 
-func (i initCmd) init(ctx context.Context) *cobra.Command {
+func (i initCmd) command(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Initialize the project",
@@ -42,7 +42,7 @@ func (i initCmd) init(ctx context.Context) *cobra.Command {
 			log.Println("Initializing the project")
 
 			log.Println("Creating the spreadsheet")
-			sheetID, err := i.sheet.Create(ctx, _nameSpreadsheet)
+			sheetID, err := i.sheet.CreateFinito(ctx, _nameSpreadsheet)
 			if err != nil {
 				log.Fatalf("Error creating spreadsheet: %v", err)
 			}
