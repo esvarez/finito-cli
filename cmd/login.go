@@ -1,7 +1,8 @@
 package cmd
 
 import (
-	"github.com/esvarez/finito/pkg/google"
+	"github.com/esvarez/finito/pkg/sheet"
+
 	"github.com/spf13/cobra"
 )
 
@@ -12,7 +13,7 @@ func loginCmd() *cobra.Command {
 		Short: "Login to the server",
 		Long:  "Login to the server",
 		Run: func(cmd *cobra.Command, args []string) {
-			google.Login()
+			sheet.Login()
 		},
 	}
 

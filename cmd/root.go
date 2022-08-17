@@ -3,12 +3,13 @@ package cmd
 import (
 	"context"
 	"github.com/esvarez/finito/config"
+	"github.com/esvarez/finito/pkg/tui"
 	"log"
 	"os"
 
 	"github.com/esvarez/finito/internal/usecase"
 	"github.com/esvarez/finito/internal/usecase/repo"
-	"github.com/esvarez/finito/pkg/google"
+	"github.com/esvarez/finito/pkg/sheet"
 
 	"github.com/spf13/cobra"
 )
@@ -31,23 +32,27 @@ func Execute() {
 		log.Fatalf("Error loading configuration: %v", err)
 	}
 
-	srv := google.GetService()
+	srv := sheet.GetService()
 	if srv != nil {
 		isLoggedIn = true
 	}
 
 	sheetRepo := repo.NewSheetRepo(srv)
 
+	view := tui.NewView()
+
 	sheet := usecase.NewSheet(sheetRepo)
 
 	addCMD := newAddCmd(&cfg.App, sheet)
 	initCMD := newInitCmd(cfg, sheet)
+	startCMD := newStartCmd(&cfg.App, view)
 
 	rootCmd.AddCommand(loginCmd())
 	rootCmd.AddCommand(configCmd(cfg))
 
 	rootCmd.AddCommand(initCMD.command(ctx))
 	rootCmd.AddCommand(addCMD.command(ctx))
+	rootCmd.AddCommand(startCMD.command(ctx))
 
 	err = rootCmd.Execute()
 	if err != nil {

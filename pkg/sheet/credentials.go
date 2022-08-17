@@ -1,4 +1,4 @@
-package google
+package sheet
 
 type Credentials struct {
 	Installed `json:"installed"`

@@ -10,3 +10,7 @@ type sheetUseCase interface {
 	AddExpense(ctx context.Context, sheetID string, transaction *entity.Transaction) error
 	AddIncome(ctx context.Context, sheetID string, transaction *entity.Transaction) error
 }
+
+type viewController interface {
+	Render() error
+}
