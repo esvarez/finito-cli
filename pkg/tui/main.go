@@ -2,13 +2,26 @@ package tui
 
 import (
 	"fmt"
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/lipgloss"
 	"os"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/lucasb-eyer/go-colorful"
+	"golang.org/x/term"
+
 	tea "github.com/charmbracelet/bubbletea"
+)
+
+const (
+	// In real life situations we'd adjust the document to fit the width we've
+	// detected. In the case of this example we're hardcoding the width, and
+	// later using the detected width only to truncate in order to avoid jaggy
+	// wrapping.
+	width = 96
+
+	columnWidth = 30
 )
 
 type keyMap struct {
@@ -121,43 +134,12 @@ func (m model) View() string {
 	helpView := m.help.View(m.keys)
 	height := 8 - strings.Count(status, "\n") - strings.Count(helpView, "\n")
 
-	return "\n" + status + strings.Repeat("\n", height) + helpView
+	return menu() + status + strings.Repeat("\n", height) + helpView
 }
 
 func NewView() *View {
 	return &View{}
 }
-
-//func (v *View) Render() error {
-//	if err := ui.Init(); err != nil {
-//		return err
-//	}
-//	defer ui.Close()
-//
-//	p := widgets.NewParagraph()
-//	p.Text = "Here will be the menu"
-//	p.Title = "Menu"
-//	p.SetRect(0, 0, 50, 5)
-//
-//	grid := ui.NewGrid()
-//	termWidth, termHeight := ui.TerminalDimensions()
-//	grid.SetRect(0, 0, termWidth, termHeight)
-//
-//	grid.Set(
-//		ui.NewRow(1.0/3,
-//			ui.NewCol(2.0/3, p),
-//		),
-//	)
-//
-//	ui.Render(grid)
-//
-//	for e := range ui.PollEvents() {
-//		if e.Type == ui.KeyboardEvent {
-//			break
-//		}
-//	}
-//	return nil
-//}
 
 func (v *View) Render() error {
 	if os.Getenv("HELP_DEBUG") != "" {
@@ -175,4 +157,160 @@ func (v *View) Render() error {
 	}
 
 	return nil
+}
+
+var (
+
+	// General
+	subtle    = lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#383838"}
+	highlight = lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#7D56F4"}
+	special   = lipgloss.AdaptiveColor{Light: "#43BF6D", Dark: "#73F59F"}
+
+	divider = lipgloss.NewStyle().
+		SetString("•").
+		Padding(0, 1).
+		Foreground(subtle).
+		String()
+
+	url = lipgloss.NewStyle().Foreground(special).Render
+
+	// Tabs
+	activeTabBorder = lipgloss.Border{
+		Top:         "─",
+		Bottom:      " ",
+		Left:        "│",
+		Right:       "│",
+		TopLeft:     "╭",
+		TopRight:    "╮",
+		BottomLeft:  "┘",
+		BottomRight: "└",
+	}
+
+	tabBorder = lipgloss.Border{
+		Top:         "─",
+		Bottom:      "─",
+		Left:        "│",
+		Right:       "│",
+		TopLeft:     "╭",
+		TopRight:    "╮",
+		BottomLeft:  "┴",
+		BottomRight: "┴",
+	}
+
+	tab = lipgloss.NewStyle().
+		Border(tabBorder, true).
+		BorderForeground(highlight).
+		Padding(0, 1)
+
+	activeTab = tab.Copy().Border(activeTabBorder, true)
+
+	tabGap = tab.Copy().
+		BorderTop(false).
+		BorderLeft(false).
+		BorderRight(false)
+
+	// Title
+
+	titleStyle = lipgloss.NewStyle().
+			MarginLeft(1).
+			MarginRight(5).
+			Padding(0, 1).
+			Italic(true).
+			Foreground(lipgloss.Color("#FFF7DB")).
+			SetString("Resumen")
+
+	descStyle = lipgloss.NewStyle().MarginTop(1)
+
+	infoStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderTop(true).
+			BorderForeground(subtle)
+
+	// Page
+	docStyle = lipgloss.NewStyle().Padding(1, 2, 1, 2)
+)
+
+func menu() string {
+	physicalWidht, _, _ := term.GetSize(int(os.Stdout.Fd()))
+	doc := strings.Builder{}
+
+	// Tabs
+	{
+		row := lipgloss.JoinHorizontal(
+			lipgloss.Top,
+			activeTab.Render("Resumen"),
+			tab.Render("Presupuesto"),
+			tab.Render("Transacciones"),
+		)
+		gap := tabGap.Render(strings.Repeat(" ", max(0, width-lipgloss.Width(row)-2)))
+		row = lipgloss.JoinHorizontal(lipgloss.Bottom, row, gap)
+		doc.WriteString(row + "\n\n")
+	}
+
+	// Title
+	{
+		var (
+			colors = colorGrid(1, 5)
+			title  strings.Builder
+		)
+
+		for i, v := range colors {
+			const offset = 2
+			c := lipgloss.Color(v[0])
+			fmt.Fprint(&title, titleStyle.Copy().MarginLeft(i*offset).Background(c))
+			if i < len(colors)-1 {
+				title.WriteString("\n")
+			}
+		}
+
+		desc := lipgloss.JoinVertical(lipgloss.Left,
+			descStyle.Render("Resumen de transacciones"),
+			// infoStyle.Render("From Charm"+divider+url("https://github.com/charmbracelet/lipgloss")),
+			infoStyle.Render("Erick Suarez"+divider+url("https://github.com/esvarez")),
+		)
+
+		row := lipgloss.JoinHorizontal(lipgloss.Top, title.String(), desc)
+		doc.WriteString(row + "\n\n")
+	}
+
+	if physicalWidht > 0 {
+		docStyle = docStyle.MaxWidth(physicalWidht)
+	}
+
+	return docStyle.Render(doc.String())
+}
+
+func colorGrid(xSteps, ySteps int) [][]string {
+	x0y0, _ := colorful.Hex("#F25D94")
+	x1y0, _ := colorful.Hex("#EDFF82")
+	x0y1, _ := colorful.Hex("#643AFF")
+	x1y1, _ := colorful.Hex("#14F9D5")
+
+	x0 := make([]colorful.Color, ySteps)
+	for i := range x0 {
+		x0[i] = x0y0.BlendLuv(x0y1, float64(i)/float64(ySteps))
+	}
+
+	x1 := make([]colorful.Color, ySteps)
+	for i := range x1 {
+		x1[i] = x1y0.BlendLuv(x1y1, float64(i)/float64(ySteps))
+	}
+
+	grid := make([][]string, ySteps)
+	for x := 0; x < ySteps; x++ {
+		y0 := x0[x]
+		grid[x] = make([]string, xSteps)
+		for y := 0; y < xSteps; y++ {
+			grid[x][y] = y0.BlendLuv(x1[x], float64(y)/float64(xSteps)).Hex()
+		}
+	}
+
+	return grid
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"os"
 
 	"github.com/spf13/viper"
@@ -8,7 +9,7 @@ import (
 
 var (
 	home, _    = os.UserHomeDir()
-	finitoDir  = home + "/.finito/"
+	finitoDir  = home + "/.config/finito/"
 	configFile = finitoDir + "config.yaml"
 )
 
@@ -50,6 +51,12 @@ func SaveConfiguration(cfg *Configuration) error {
 }
 
 func init() {
+	if _, err := os.Stat(finitoDir); os.IsNotExist(err) {
+		err = os.Mkdir(finitoDir, os.ModePerm)
+		if err != nil {
+			log.Printf("error creating config directory: %v", err)
+		}
+	}
 	file := viper.New()
 	file.SetConfigFile(configFile)
 	file.AddConfigPath(finitoDir)

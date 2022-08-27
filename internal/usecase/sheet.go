@@ -3,8 +3,9 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"github.com/esvarez/finito/internal/entity"
 	"time"
+
+	"github.com/esvarez/finito/internal/entity"
 )
 
 type sheetRepo interface {
@@ -56,11 +57,12 @@ func (u *SheetUseCase) AddIncome(ctx context.Context, sheetID string, transactio
 func (u *SheetUseCase) fillDefaultTransactionValues(transaction *entity.Transaction) {
 	if v := transaction.Date; v == "" {
 		transaction.Date = time.Now().Format("2006-01-02")
+		transaction.Month = fmt.Sprintf("=MONTH(%s)", transaction.Date)
 	}
 	if v := transaction.Description; v == "" {
 		transaction.Description = "//TODO"
 	}
 	if v := transaction.Category; v == "" {
-		transaction.Category = "Other"
+		transaction.Category = "Otros"
 	}
 }

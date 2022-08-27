@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+
 	"github.com/esvarez/finito/internal/entity"
 	"google.golang.org/api/sheets/v4"
 )
@@ -43,9 +44,10 @@ func (r *SheetRepo) AddRow(ctx context.Context, sheetID, column string, row *ent
 	req := &sheets.ValueRange{
 		Range: column,
 		Values: [][]interface{}{
-			{row.Date, row.Amount, row.Description, row.Category},
+			{row.Date, row.Month, row.Amount, row.Description, row.Category},
 		},
 	}
+
 	_, err := r.srv.Spreadsheets.Values.
 		Append(sheetID, column, req).
 		ValueInputOption(_userEntered).

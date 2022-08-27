@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"context"
-	"fmt"
+
 	"github.com/esvarez/finito/config"
 
 	"github.com/spf13/cobra"
@@ -26,7 +26,6 @@ func (s startCmd) command(_ context.Context) *cobra.Command {
 		Short: "Start the application",
 		Long:  `Start the application`,
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("start called")
 			s.view.Render()
 		},
 	}

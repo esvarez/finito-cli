@@ -2,10 +2,11 @@ package cmd
 
 import (
 	"context"
-	"github.com/esvarez/finito/config"
-	"github.com/esvarez/finito/pkg/tui"
 	"log"
 	"os"
+
+	"github.com/esvarez/finito/config"
+	"github.com/esvarez/finito/pkg/tui"
 
 	"github.com/esvarez/finito/internal/usecase"
 	"github.com/esvarez/finito/internal/usecase/repo"
@@ -32,11 +33,11 @@ func Execute() {
 		log.Fatalf("Error loading configuration: %v", err)
 	}
 
-	srv := sheet.GetService()
-	if srv != nil {
-		isLoggedIn = true
+	srv, err := sheet.GetService()
+	if err != nil {
+		log.Fatalf("Error getting service: %v", err)
+		return
 	}
-
 	sheetRepo := repo.NewSheetRepo(srv)
 
 	view := tui.NewView()

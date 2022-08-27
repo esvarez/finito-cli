@@ -17,26 +17,28 @@ import (
 
 var (
 	home, _   = os.UserHomeDir()
-	finitoDir = home + "/.finito/"
+	finitoDir = home + "/.config/finito/"
 	tokenFile = finitoDir + "token.json"
 )
 
-func GetService() *sheets.Service {
+func GetService() (*sheets.Service, error) {
 	ctx := context.Background()
 
 	tok, err := tokenFromFile(tokenFile)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	b, err := json.Marshal(getCredentials())
 	if err != nil {
 		log.Fatalf("Unable to read client secret file: %v", err)
+		return nil, err
 	}
 
 	config, err := google.ConfigFromJSON(b, sheets.SpreadsheetsScope)
 	if err != nil {
 		log.Fatalf("Unable to parse client secret file to config: %v", err)
+		return nil, err
 	}
 
 	client := config.Client(context.Background(), tok)
@@ -44,8 +46,9 @@ func GetService() *sheets.Service {
 	srv, err := sheets.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
 		log.Fatalf("Unable to retrieve Sheets client: %v", err)
+		return nil, err
 	}
-	return srv
+	return srv, nil
 }
 
 func Login() *sheets.Service {
