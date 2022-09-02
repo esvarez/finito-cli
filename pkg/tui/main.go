@@ -6,17 +6,6 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-)
-
-const (
-	// In real life situations we'd adjust the document to fit the width we've
-	// detected. In the case of this example we're hardcoding the width, and
-	// later using the detected width only to truncate in order to avoid jaggy
-	// wrapping.
-	width = 96
-
-	columnWidth = 30
 )
 
 type keyMap struct {
@@ -104,6 +93,7 @@ func (v *View) Render() error {
 	return nil
 }
 
+/*
 var (
 	// General
 	subtle    = lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#383838"}
@@ -164,4 +154,4 @@ var (
 
 	// Page
 	docStyle = lipgloss.NewStyle().Padding(1, 2, 1, 2)
-)
+)*/

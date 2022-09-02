@@ -13,8 +13,128 @@ import (
 	"golang.org/x/term"
 )
 
+const (
+	// In real life situations we'd adjust the document to fit the width we've
+	// detected. In the case of this example we're hardcoding the width, and
+	// later using the detected width only to truncate in order to avoid jaggy
+	// wrapping.
+	width = 96
+
+	columnWidth = 30
+)
+
+var (
+	// General
+	subtle    = lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#383838"}
+	highlight = lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#7D56F4"}
+	special   = lipgloss.AdaptiveColor{Light: "#43BF6D", Dark: "#73F59F"}
+
+	divider = lipgloss.NewStyle().
+		SetString("•").
+		Padding(0, 1).
+		Foreground(subtle).
+		String()
+
+	url = lipgloss.NewStyle().Foreground(special).Render
+
+	// Tabs
+	activeTabBorder = lipgloss.Border{
+		Top:         "─",
+		Bottom:      " ",
+		Left:        "│",
+		Right:       "│",
+		TopLeft:     "╭",
+		TopRight:    "╮",
+		BottomLeft:  "┘",
+		BottomRight: "└",
+	}
+
+	tabBorder = lipgloss.Border{
+		Top:         "─",
+		Bottom:      "─",
+		Left:        "│",
+		Right:       "│",
+		TopLeft:     "╭",
+		TopRight:    "╮",
+		BottomLeft:  "┴",
+		BottomRight: "┴",
+	}
+
+	tab = lipgloss.NewStyle().
+		Border(tabBorder, true).
+		BorderForeground(highlight).
+		Padding(0, 1)
+
+	activeTab = tab.Copy().Border(activeTabBorder, true)
+
+	tabGap = tab.Copy().
+		BorderTop(false).
+		BorderLeft(false).
+		BorderRight(false)
+
+	// Title
+
+	descStyle = lipgloss.NewStyle().MarginTop(1)
+
+	infoStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderTop(true).
+			BorderForeground(subtle)
+
+	// Dialog.
+
+	dialogBoxStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#874BFD")).
+			Padding(1, 0).
+			BorderTop(true).
+			BorderLeft(true).
+			BorderRight(true).
+			BorderBottom(true)
+
+	buttonStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFF7DB")).
+			Background(lipgloss.Color("#888B7E")).
+			Padding(0, 3).
+			MarginTop(1)
+
+	activeButtonStyle = buttonStyle.Copy().
+				Foreground(lipgloss.Color("#FFF7DB")).
+				Background(lipgloss.Color("#F25D94")).
+				MarginRight(2).
+				Underline(true)
+
+	// Status bar
+	statusNugget = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFFDF5")).
+			Padding(0, 1)
+
+	statusBarStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.AdaptiveColor{Light: "#343433", Dark: "#C1C6B2"}).
+			Background(lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#353533"})
+
+	statusStyle = lipgloss.NewStyle().
+			Inherit(statusBarStyle).
+			Foreground(lipgloss.Color("#FFFDF5")).
+			Background(lipgloss.Color("#FF5F87")).
+			Padding(0, 1).
+			MarginRight(1)
+
+	encodingStyle = statusNugget.Copy().
+			Background(lipgloss.Color("#A550DF")).
+			Align(lipgloss.Right)
+
+	statusText = lipgloss.NewStyle().Inherit(statusBarStyle)
+
+	fishCakeStyle = statusNugget.Copy().Background(lipgloss.Color("#6124DF"))
+
+	// Page
+	docStyle = lipgloss.NewStyle().Padding(1, 2, 1, 2)
+)
+
 type model struct {
-	terminal *terminal
+	ui      *ui
+	storage *storage
 
 	keys       keyMap
 	help       help.Model
@@ -25,7 +145,8 @@ type model struct {
 
 func newModel() model {
 	return model{
-		terminal: newTerminal(),
+		ui:      newUI(),
+		storage: newStorage(),
 
 		keys:       keys,
 		help:       help.New(),
@@ -45,9 +166,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.keys.Tab):
-			m.terminal.nextTab()
+			m.ui.nextTab()
 		case key.Matches(msg, m.keys.ShiftTab):
-			m.terminal.previousTab()
+			m.ui.previousTab()
 		case key.Matches(msg, m.keys.Up):
 			m.lastKey = "↑"
 		case key.Matches(msg, m.keys.Down):
@@ -65,7 +186,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lastKey = msg.String()
 		}
 	}
-	return m, nil
+	return m, tea.EnterAltScreen
 }
 
 func (m model) View() string {
@@ -81,9 +202,10 @@ func (m model) View() string {
 	}
 
 	helpView := m.help.View(m.keys)
-	height := 8 - strings.Count(status, "\n") - strings.Count(helpView, "\n")
+	//height := 2 - strings.Count(status, "\n") - strings.Count(helpView, "\n")
 
-	return m.menu() + status + strings.Repeat("\n", height) + helpView
+	//return m.menu() + status + strings.Repeat("\n", height) + helpView
+	return m.menu() + "\n" + status + "\n" + helpView
 }
 
 func (m model) menu() string {
@@ -99,6 +221,16 @@ func (m model) menu() string {
 		doc.WriteString(m.getTitle() + "\n\n")
 	}
 
+	//// Body
+	{
+		doc.WriteString(m.getResume() + "\n\n")
+	}
+
+	// Status bar
+	{
+		doc.WriteString(m.getStatusBar() + "\n\n")
+	}
+
 	if physicalWidht > 0 {
 		docStyle = docStyle.MaxWidth(physicalWidht)
 	}
@@ -108,8 +240,8 @@ func (m model) menu() string {
 
 func (m model) getTabs() string {
 	var tabs []string
-	for i, t := range m.terminal.tabs {
-		if i == m.terminal.activeTab {
+	for i, t := range m.ui.tabs {
+		if i == m.ui.activeTab {
 			tabs = append(tabs, activeTab.Render(t))
 		} else {
 			tabs = append(tabs, tab.Render(t))
@@ -138,7 +270,7 @@ func (m model) getTitle() string {
 		Padding(0, 1).
 		Italic(true).
 		Foreground(lipgloss.Color("#FFF7DB")).
-		SetString(m.terminal.title)
+		SetString(m.ui.title)
 
 	for i, v := range colors {
 		const offset = 2
@@ -157,6 +289,59 @@ func (m model) getTitle() string {
 
 	row := lipgloss.JoinHorizontal(lipgloss.Top, title.String(), desc)
 	return row
+}
+
+func (m model) getResume() string {
+	var (
+		colors = colorGrid(1, 5)
+		title  strings.Builder
+	)
+
+	titleStyle := lipgloss.NewStyle().
+		Bold(true).
+		Padding(0, 1).
+		MarginBottom(1).
+		Foreground(lipgloss.Color("#FFF7DB")).
+		SetString("Balance")
+
+	fmt.Fprint(&title, titleStyle.Copy().
+		Background(lipgloss.Color(colors[m.ui.activeTab][0])))
+
+	style := lipgloss.NewStyle().Padding(0, 1).Width(50).Align(lipgloss.Left)
+	cash := style.Render(fmt.Sprintf("Efectivo  $%.2f", m.storage.getCash()))
+	debit := style.Render(fmt.Sprintf("Debito    $%.2f", m.storage.getDebit()))
+	credit := style.Render(fmt.Sprintf("Credito   $%.2f", m.storage.getCredit()))
+	total := style.Render(fmt.Sprintf("Total     $%.2f", m.storage.getTotal()))
+	balance := lipgloss.JoinVertical(lipgloss.Top, cash, debit, credit, total)
+	ui := lipgloss.JoinVertical(lipgloss.Center, title.String(), balance)
+
+	dialog := lipgloss.Place(width, 12,
+		lipgloss.Center, lipgloss.Center,
+		dialogBoxStyle.Render(ui),
+		lipgloss.WithWhitespaceChars("猫咪"),
+		lipgloss.WithWhitespaceForeground(subtle),
+	)
+	return dialog
+}
+
+func (m model) getStatusBar() string {
+	w := lipgloss.Width
+
+	statusKey := statusStyle.Render("STATUS")
+	encoding := encodingStyle.Render("UTF-8")
+	fishCake := fishCakeStyle.Render("🍥 Fish Cake")
+	statusVal := statusText.Copy().
+		Width(width - w(statusKey) - w(encoding) - w(fishCake)).
+		Render("Ravishing")
+
+	bar := lipgloss.JoinHorizontal(lipgloss.Top,
+		statusKey,
+		statusVal,
+		encoding,
+		fishCake,
+	)
+
+	return statusBarStyle.Width(width).Render(bar)
 }
 
 func colorGrid(xSteps, ySteps int) [][]string {
