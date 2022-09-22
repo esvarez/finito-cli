@@ -44,7 +44,7 @@ func (r *SheetRepo) AddRow(ctx context.Context, sheetID, column string, row *ent
 	req := &sheets.ValueRange{
 		Range: column,
 		Values: [][]interface{}{
-			{row.Date, row.Month, row.Amount, row.Description, row.Category},
+			{row.Date, row.Month, row.Amount, row.Description, row.Category, row.Account},
 		},
 	}
 
@@ -76,4 +76,12 @@ func (r *SheetRepo) AddSheet(ctx context.Context, sheetID, name string) error {
 		return err
 	}
 	return nil
+}
+
+func (r *SheetRepo) ReadRange(ctx context.Context, sheetID, rangeName string) (*sheets.ValueRange, error) {
+	resp, err := r.srv.Spreadsheets.Values.Get(sheetID, rangeName).Context(ctx).Do()
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }

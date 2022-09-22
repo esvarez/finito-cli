@@ -1,9 +1,16 @@
 package cmd
 
 import (
-	"github.com/esvarez/finito/pkg/ui"
-	"github.com/spf13/cobra"
+	"context"
+	"log"
 	"os"
+
+	"github.com/esvarez/finito/config"
+	"github.com/esvarez/finito/internal/usecase"
+	"github.com/esvarez/finito/internal/usecase/repo"
+	"github.com/esvarez/finito/pkg/sheet"
+
+	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
@@ -12,12 +19,24 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
+	ctx := context.Background()
+	conf, err := config.LoadConfiguration()
+	if err != nil {
+		log.Fatalf("Error loading configuration: %v", err)
+	}
 
-	controller := ui.NewController()
+	srv, err := sheet.GetService()
+	if err != nil {
+		log.Fatalf("Error getting service: %v", err)
+		return
+	}
 
-	addcmd := newAddCmd(controller)
+	sheetRepo := repo.NewSheetRepo(srv)
+	sheet := usecase.NewSheet(sheetRepo)
+	cmdTrnsfr := NewCmdTransfer(sheet, conf)
 
-	rootCmd.AddCommand(addcmd.command())
+	rootCmd.AddCommand(cmdTrnsfr.CmdTransfer(ctx))
+	rootCmd.AddCommand(loginCmd())
 
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 

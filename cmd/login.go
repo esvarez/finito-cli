@@ -1,4 +1,4 @@
-package _cmd
+package cmd
 
 import (
 	"github.com/esvarez/finito/pkg/sheet"

@@ -2,6 +2,7 @@ package _cmd
 
 import (
 	"context"
+	"github.com/esvarez/finito/cmd"
 	"log"
 	"os"
 
@@ -48,7 +49,7 @@ func Execute() {
 	initCMD := newInitCmd(cfg, sheet)
 	startCMD := newStartCmd(&cfg.App, view)
 
-	rootCmd.AddCommand(loginCmd())
+	rootCmd.AddCommand(cmd.loginCmd())
 	rootCmd.AddCommand(configCmd(cfg))
 
 	rootCmd.AddCommand(initCMD.command(ctx))

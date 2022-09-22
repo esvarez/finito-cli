@@ -6,4 +6,5 @@ type Transaction struct {
 	Amount      string `json:"amount"`
 	Description string `json:"description"`
 	Category    string `json:"category"`
+	Account     string `json:"account"`
 }
