@@ -3,11 +3,10 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"google.golang.org/api/sheets/v4"
-	"strings"
 	"time"
 
 	"github.com/esvarez/finito/internal/entity"
+	"google.golang.org/api/sheets/v4"
 )
 
 type sheetRepo interface {
@@ -15,13 +14,15 @@ type sheetRepo interface {
 	AddSheet(ctx context.Context, sheetID, name string) error
 	AddRow(ctx context.Context, sheetID, column string, row *entity.Transaction) error
 	ReadRange(ctx context.Context, sheetID, rangeName string) (*sheets.ValueRange, error)
+	WriteValues(ctx context.Context, sheetID string, data []*sheets.ValueRange) error
 }
 
 const (
 	_mainSheet         = "Summary"
 	_transactionsSheet = "Transacciones"
-	_expenseField      = "B4"
-	_incomeField       = "I4"
+	_layout            = "02/01/2006 15:04"
+	_columExpense      = "B"
+	_columIncome       = "I"
 )
 
 type SheetUseCase struct {
@@ -45,14 +46,16 @@ func (u *SheetUseCase) CreateFinito(ctx context.Context, name string) (string, e
 	return sheetID, nil
 }
 
+// Deprecated: use AddIncome instead
 func (u *SheetUseCase) AddExpense(ctx context.Context, sheetID string, transaction *entity.Transaction) error {
-	column := _transactionsSheet + "!" + _expenseField
+	column := _transactionsSheet + "!"
 	u.fillDefaultTransactionValues(transaction)
 	return u.repo.AddRow(ctx, sheetID, column, transaction)
 }
 
+// Deprecated: use AddIncome instead
 func (u *SheetUseCase) AddIncome(ctx context.Context, sheetID string, transaction *entity.Transaction) error {
-	column := _transactionsSheet + "!" + _incomeField
+	column := _transactionsSheet + "!"
 	u.fillDefaultTransactionValues(transaction)
 	return u.repo.AddRow(ctx, sheetID, column, transaction)
 }
@@ -70,99 +73,89 @@ func (u *SheetUseCase) fillDefaultTransactionValues(transaction *entity.Transact
 	}
 }
 
-func (u *SheetUseCase) TransferExpenses(ctx context.Context, sheetOrigin, SheetID string) error {
-
+func (u *SheetUseCase) TransferExpenses(ctx context.Context, rowExpense, rowIncome int, sheetOrigin, SheetID string) error {
 	resp, err := u.repo.ReadRange(ctx, sheetOrigin, "Wallet!A2:X100")
 	if err != nil {
 		return fmt.Errorf("failed to read range: %w", err)
 	}
+	expenseLayout := fmt.Sprintf("%s!%s", _transactionsSheet, _columExpense)
+	incomeLayout := fmt.Sprintf("%s!%s", _transactionsSheet, _columIncome)
+
+	data := make([]*sheets.ValueRange, 0)
+	const transferencia = "Transferencia"
 
 	for _, row := range resp.Values {
 		if len(row) == 0 {
 			break
 		}
-		date := strings.Split(row[0].(string), " ")[0]
+		t, err := time.Parse(_layout, row[0].(string))
+		if err != nil {
+			fmt.Println(err)
+		}
 
+		amount := fmt.Sprintf("%s", row[10])
+		account := row[3].(string)
 		if row[6] == "TRANSFER" {
 
-			tranferencia := "Transferencia"
-			expense := &entity.Transaction{
-				Date:        date,
-				Month:       fmt.Sprintf("=MONTH(%s)", date),
-				Amount:      fmt.Sprintf("=ABS(%s)", row[7]),
-				Description: tranferencia,
-				Category:    tranferencia,
-				Account:     row[3].(string),
-			}
-			income := &entity.Transaction{
-				Date:        date,
-				Month:       fmt.Sprintf("=MONTH(%s)", date),
-				Amount:      fmt.Sprintf("=ABS(%s)", row[7]),
-				Description: tranferencia,
-				Category:    tranferencia,
-				Account:     row[9].(string),
-			}
+			from := row[3].(string)
+			to := row[9].(string)
 
-			if err := u.AddExpense(ctx, SheetID, expense); err != nil {
-				return fmt.Errorf("failed to add expense: %w", err)
-			}
-			if err := u.AddIncome(ctx, SheetID, income); err != nil {
-				return fmt.Errorf("failed to add income: %w", err)
-			}
-		} else if row[1] == "Ahorro" {
-			if err := u.transferSavings(ctx, SheetID, date, row[4], row[1], row[2], row[3]); err != nil {
-				return fmt.Errorf("failed to transfer savings: %w", err)
-			}
+			data = append(data, &sheets.ValueRange{
+				Range: fmt.Sprintf("%s%d", expenseLayout, rowExpense),
+				Values: [][]interface{}{
+					{t.String(), int(t.Month()), amount, transferencia, transferencia, from},
+				},
+			})
+			rowExpense++
+			data = append(data, &sheets.ValueRange{
+				Range: fmt.Sprintf("%s%d", incomeLayout, rowIncome),
+				Values: [][]interface{}{
+					{t.String(), int(t.Month()), amount, transferencia, transferencia, to},
+				},
+			})
+			rowIncome++
+		} else if row[1] == transferencia {
+			description := row[1].(string)
+			category := row[2].(string)
+
+			data = append(data, &sheets.ValueRange{
+				Range: fmt.Sprintf("%s%d", expenseLayout, rowExpense),
+				Values: [][]interface{}{
+					{t.String(), int(t.Month()), amount, description, category, account},
+				},
+			})
+			rowExpense++
+
+			data = append(data, &sheets.ValueRange{
+				Range: fmt.Sprintf("%s%d", incomeLayout, rowIncome),
+				Values: [][]interface{}{
+					{t.String(), int(t.Month()), amount, description, transferencia, category},
+				},
+			})
+			rowIncome++
 		} else {
-			date := strings.Split(row[0].(string), " ")[0]
-			transaction := &entity.Transaction{
-				Date:        date,
-				Month:       fmt.Sprintf("=MONTH(%s)", date),
-				Amount:      fmt.Sprintf("=ABS(%s)", row[4]),
-				Description: row[1].(string),
-				Category:    row[2].(string),
-				Account:     row[3].(string),
+			description := row[1].(string)
+			category := row[2].(string)
+
+			value := [][]interface{}{
+				{t.String(), int(t.Month()), amount, description, category, account},
 			}
 
 			if row[6] == "EXPENSE" {
-				if err := u.AddExpense(ctx, SheetID, transaction); err != nil {
-					return fmt.Errorf("failed to add expense: %w", err)
-				}
+				data = append(data, &sheets.ValueRange{
+					Range:  fmt.Sprintf("%s%d", expenseLayout, rowExpense),
+					Values: value,
+				})
+				rowExpense++
 			} else if row[6] == "INCOME" {
-				if err := u.AddIncome(ctx, SheetID, transaction); err != nil {
-					return fmt.Errorf("failed to add income: %w", err)
-				}
+				data = append(data, &sheets.ValueRange{
+					Range:  fmt.Sprintf("%s%d", incomeLayout, rowIncome),
+					Values: value,
+				})
+				rowIncome++
 			}
 		}
 	}
 
-	return nil
-}
-
-func (u *SheetUseCase) transferSavings(ctx context.Context, id string, date, amount, description, category, account any) error {
-	expense := &entity.Transaction{
-		Date:        fmt.Sprintf("%s", date),
-		Month:       fmt.Sprintf("=MONTH(%s)", date),
-		Amount:      fmt.Sprintf("=ABS(%s)", amount),
-		Description: fmt.Sprintf("%s", description),
-		Category:    fmt.Sprintf("%s", category),
-		Account:     fmt.Sprintf("%s", account),
-	}
-
-	income := &entity.Transaction{
-		Date:        fmt.Sprintf("%s", date),
-		Month:       fmt.Sprintf("=MONTH(%s)", date),
-		Amount:      fmt.Sprintf("=ABS(%s)", amount),
-		Description: fmt.Sprintf("%s", description),
-		Category:    "Transferencia",
-		Account:     fmt.Sprintf("%s", category),
-	}
-
-	if err := u.AddExpense(ctx, id, expense); err != nil {
-		return fmt.Errorf("failed to add expense: %w", err)
-	}
-	if err := u.AddIncome(ctx, id, income); err != nil {
-		return fmt.Errorf("failed to add income: %w", err)
-	}
-	return nil
+	return u.repo.WriteValues(ctx, SheetID, data)
 }

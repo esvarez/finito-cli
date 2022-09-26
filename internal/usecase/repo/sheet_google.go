@@ -2,7 +2,6 @@ package repo
 
 import (
 	"context"
-
 	"github.com/esvarez/finito/internal/entity"
 	"google.golang.org/api/sheets/v4"
 )
@@ -84,4 +83,18 @@ func (r *SheetRepo) ReadRange(ctx context.Context, sheetID, rangeName string) (*
 		return nil, err
 	}
 	return resp, nil
+}
+
+func (r *SheetRepo) WriteValues(ctx context.Context, sheetID string, data []*sheets.ValueRange) error {
+	req := &sheets.BatchUpdateValuesRequest{
+		Data:             data,
+		ValueInputOption: _userEntered,
+	}
+
+	_, err := r.srv.Spreadsheets.Values.BatchUpdate(sheetID, req).Context(ctx).Do()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
