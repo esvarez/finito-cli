@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -18,7 +19,7 @@ import (
 var (
 	home, _   = os.UserHomeDir()
 	finitoDir = home + "/.config/finito/"
-	tokenFile = finitoDir + "token.json"
+	tokenFile = finitoDir + "config.yml"
 )
 
 func GetService() (*sheets.Service, error) {
@@ -26,6 +27,7 @@ func GetService() (*sheets.Service, error) {
 
 	tok, err := tokenFromFile(tokenFile)
 	if err != nil {
+		log.Fatalf("Unable to read client secret file: %v", err)
 		return nil, err
 	}
 
@@ -108,6 +110,10 @@ func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
 func tokenFromFile(file string) (*oauth2.Token, error) {
 	f, err := os.Open(file)
 	if err != nil {
+		log.Printf("error opening file %v", err)
+		if !strings.Contains(err.Error(), "no such file or directory") {
+
+		}
 		return nil, err
 	}
 	defer f.Close()
