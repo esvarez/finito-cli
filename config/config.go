@@ -10,15 +10,15 @@ import (
 var (
 	home, _    = os.UserHomeDir()
 	finitoDir  = home + "/.config/finito/"
-	configFile = finitoDir + "config.yml"
+	configFile = finitoDir + "config.json"
 )
 
 type Configuration struct {
-	App
+	App App `json:"app"`
 }
 
 type App struct {
-	SheetID *string `mapstructure:"sheet_id" yaml:"sheet_id"`
+	SheetID *string `mapstructure:"sheet_id" yaml:"sheet_id" json:"sheet_id"`
 }
 
 func LoadConfiguration() (*Configuration, error) {
@@ -40,7 +40,7 @@ func LoadConfiguration() (*Configuration, error) {
 func SaveConfiguration(cfg *Configuration) error {
 	file := viper.New()
 	file.SetConfigFile(configFile)
-	file.SetConfigType("yml")
+	file.SetConfigType("json")
 	file.Set("app", cfg.App)
 
 	if err := file.WriteConfig(); err != nil {
@@ -60,7 +60,7 @@ func init() {
 	file := viper.New()
 	file.SetConfigFile(configFile)
 	file.AddConfigPath(finitoDir)
-	file.SetConfigType("yml")
+	file.SetConfigType("json")
 	file.Set("app.sheet_id", nil)
 	file.SafeWriteConfig()
 }

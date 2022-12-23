@@ -19,7 +19,7 @@ import (
 var (
 	home, _   = os.UserHomeDir()
 	finitoDir = home + "/.config/finito/"
-	tokenFile = finitoDir + "config.yml"
+	tokenFile = finitoDir + "config.json"
 )
 
 func GetService() (*sheets.Service, error) {

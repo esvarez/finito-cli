@@ -73,7 +73,18 @@ func (u *SheetUseCase) fillDefaultTransactionValues(transaction *entity.Transact
 	}
 }
 
-func (u *SheetUseCase) TransferExpenses(ctx context.Context, rowExpense, rowIncome int, sheetOrigin, SheetID string) error {
+func (u *SheetUseCase) TransferExpenses(ctx context.Context, sheetOrigin, SheetID string) error {
+	rowExpense, err := u.getLastRow(ctx, SheetID, _columExpense)
+	if err != nil {
+		return fmt.Errorf("failed to get last row: %w", err)
+	}
+	rowIncome, err := u.getLastRow(ctx, SheetID, _columIncome)
+	if err != nil {
+		return fmt.Errorf("failed to get last row: %w", err)
+	}
+
+	fmt.Printf("rowExpense: %d, rowIncome: %d", rowExpense, rowIncome)
+
 	resp, err := u.repo.ReadRange(ctx, sheetOrigin, "Wallet!A2:X100")
 	if err != nil {
 		return fmt.Errorf("failed to read range: %w", err)
@@ -156,6 +167,15 @@ func (u *SheetUseCase) TransferExpenses(ctx context.Context, rowExpense, rowInco
 			}
 		}
 	}
-
+	
 	return u.repo.WriteValues(ctx, SheetID, data)
+}
+
+func (u *SheetUseCase) getLastRow(ctx context.Context, sheetID, column string) (int, error) {
+	range_ := fmt.Sprintf("Transacciones!%s:%s", column, column)
+	resp, err := u.repo.ReadRange(ctx, sheetID, range_)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read range: %w", err)
+	}
+	return len(resp.Values) + 1, nil
 }

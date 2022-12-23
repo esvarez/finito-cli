@@ -39,7 +39,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println("transfer called")
-			if err := t.sheet.TransferExpenses(ctx, rowExpense, rowIncome, origin, *t.conf.App.SheetID); err != nil {
+			if err := t.sheet.TransferExpenses(ctx, origin, *t.conf.App.SheetID); err != nil {
 				fmt.Println(err)
 				return
 			}
@@ -47,12 +47,8 @@ to quickly create a Cobra application.`,
 		},
 	}
 	transferCmd.Flags().StringVarP(&origin, "origin", "o", "", "The origin sheet")
-	transferCmd.Flags().IntVarP(&rowIncome, "row-income", "i", 0, "The row where the income is")
-	transferCmd.Flags().IntVarP(&rowExpense, "row-expense", "e", 0, "The row where the expense is")
 
 	transferCmd.MarkFlagRequired("origin")
-	transferCmd.MarkFlagRequired("row-income")
-	transferCmd.MarkFlagRequired("row-expense")
 
 	return transferCmd
 }
